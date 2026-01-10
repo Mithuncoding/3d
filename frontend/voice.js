@@ -12,6 +12,7 @@ const VoiceChat = (function() {
     let workletNode = null;
     let active = false;
     let setupComplete = false;
+    let positionInterval = null;
 
     // Config
     let apiKey = null;
@@ -28,6 +29,7 @@ const VoiceChat = (function() {
     let playbackQueue = [];
     let isPlaying = false;
     let nextPlayTime = 0;
+    let currentSource = null;
 
     /**
      * Build system prompt with map context
@@ -197,6 +199,15 @@ Your role:
 
                 const inputData = event.data;
 
+                // Basic voice activity detection - only interrupt if user is actually speaking
+                let maxAmp = 0;
+                for (let i = 0; i < inputData.length; i++) {
+                    maxAmp = Math.max(maxAmp, Math.abs(inputData[i]));
+                }
+                if (maxAmp > 0.02 && (isPlaying || playbackQueue.length > 0)) {
+                    interrupt();
+                }
+
                 // Resample if needed
                 const outputData = resampleAudio(inputData, audioContext.sampleRate, SEND_SAMPLE_RATE);
 
@@ -300,6 +311,47 @@ Your role:
     }
 
     /**
+     * Send position update to Gemini
+     */
+    function sendPositionUpdate() {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !getPositionFn) return;
+
+        const pos = getPositionFn();
+        if (!pos) return;
+
+        const msg = {
+            clientContent: {
+                turns: [{
+                    role: "user",
+                    parts: [{
+                        text: `[Position update: ${pos.lat.toFixed(4)}°, ${pos.lon.toFixed(4)}°, ${Math.round(pos.altitude)}m altitude]`
+                    }]
+                }],
+                turnComplete: true
+            }
+        };
+        ws.send(JSON.stringify(msg));
+        console.log('[Voice] Position update sent');
+    }
+
+    /**
+     * Interrupt ongoing playback (when user starts speaking)
+     */
+    function interrupt() {
+        playbackQueue = [];
+        nextPlayTime = 0;
+        isPlaying = false;
+        if (currentSource) {
+            try {
+                currentSource.stop();
+            } catch (e) {
+                // Already stopped
+            }
+            currentSource = null;
+        }
+    }
+
+    /**
      * Process playback queue
      */
     function processPlaybackQueue() {
@@ -345,6 +397,7 @@ Your role:
             const source = audioContext.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(audioContext.destination);
+            currentSource = source;
 
             // Schedule playback
             const currentTime = audioContext.currentTime;
@@ -355,11 +408,13 @@ Your role:
             nextPlayTime = startTime + audioBuffer.duration;
 
             source.onended = () => {
+                currentSource = null;
                 isPlaying = false;
                 processPlaybackQueue();
             };
         } catch (e) {
             console.error('[Voice] Playback error:', e);
+            currentSource = null;
             isPlaying = false;
             processPlaybackQueue();
         }
@@ -419,6 +474,9 @@ Your role:
                 await connectWebSocket();
                 await startMicCapture();
 
+                // Start position update interval (every 60s)
+                positionInterval = setInterval(sendPositionUpdate, 60000);
+
                 console.log('[Voice] Started successfully');
             } catch (e) {
                 active = false;
@@ -432,6 +490,12 @@ Your role:
         stop() {
             active = false;
             setupComplete = false;
+
+            // Clear position update interval
+            if (positionInterval) {
+                clearInterval(positionInterval);
+                positionInterval = null;
+            }
 
             stopMicCapture();
 

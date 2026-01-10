@@ -56,15 +56,42 @@ function init() {
     state.renderer = new THREE.WebGLRenderer({ antialias: true });
     state.renderer.setSize(window.innerWidth, window.innerHeight);
     state.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Enable shadow mapping
+    state.renderer.shadowMap.enabled = true;
+    state.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
     container.appendChild(state.renderer.domElement);
 
     // Lighting
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.45);
     state.scene.add(ambient);
 
-    state.sun = new THREE.DirectionalLight(0xffffff, 0.8);
+    state.sun = new THREE.DirectionalLight(0xffffff, 1.0);
     // Match original position: (-100, 150, 100)
     state.sun.position.set(-100, 150, 100);
+
+    // Explicitly set target to terrain center
+    state.sun.target.position.set(0, 0, 0);
+    state.scene.add(state.sun.target);
+
+    // Configure shadow casting
+    state.sun.castShadow = true;
+    state.sun.shadow.mapSize.width = 2048;
+    state.sun.shadow.mapSize.height = 2048;
+
+    // Shadow camera frustum (orthographic bounds)
+    state.sun.shadow.camera.left = -75;
+    state.sun.shadow.camera.right = 75;
+    state.sun.shadow.camera.top = 75;
+    state.sun.shadow.camera.bottom = -75;
+    state.sun.shadow.camera.near = 1;
+    state.sun.shadow.camera.far = 400;
+    state.sun.shadow.camera.updateProjectionMatrix();
+
+    // Shadow quality tuning - try zero bias first
+    state.sun.shadow.bias = 0;
+
     state.scene.add(state.sun);
 
     // Water plane
@@ -78,6 +105,7 @@ function init() {
     const water = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
     water.position.y = -1;
+    water.receiveShadow = true;
     state.scene.add(water);
 
     // Setup UI
@@ -139,8 +167,8 @@ function setupUI() {
     const exagSlider = document.getElementById('exag');
     exagSlider.addEventListener('input', () => {
         document.getElementById('exag-val').textContent = exagSlider.value + '×';
-        if (state.terrain && state.terrain.material.displacementMap) {
-            state.terrain.material.displacementScale = parseFloat(exagSlider.value);
+        if (state.terrain && state.heightmapTexture) {
+            createTerrain(); // Rebuild terrain with new exaggeration
         }
     });
 
@@ -330,10 +358,13 @@ function createTerrain() {
 
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
+    // Apply heightmap to actual geometry vertices (not displacement map)
+    if (state.heightmapTexture) {
+        applyHeightmapToGeometry(geometry, state.heightmapTexture, exag);
+    }
+
     const material = new THREE.MeshStandardMaterial({
         map: state.colorTexture,
-        displacementMap: state.heightmapTexture || null,
-        displacementScale: state.heightmapTexture ? exag : 0,
         roughness: 0.8,
         metalness: 0.1,
         side: THREE.DoubleSide
@@ -341,7 +372,46 @@ function createTerrain() {
 
     state.terrain = new THREE.Mesh(geometry, material);
     state.terrain.rotation.x = -Math.PI / 2;
+    state.terrain.castShadow = true;
+    state.terrain.receiveShadow = true;
     state.scene.add(state.terrain);
+}
+
+function applyHeightmapToGeometry(geometry, heightmapTexture, scale) {
+    const img = heightmapTexture.image;
+    if (!img) return;
+
+    // Create canvas to read pixel data
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, img.width, img.height);
+
+    const positions = geometry.attributes.position;
+    const width = Math.sqrt(positions.count);
+
+    for (let i = 0; i < positions.count; i++) {
+        const x = i % width;
+        const y = Math.floor(i / width);
+
+        // Sample heightmap
+        const u = x / (width - 1);
+        const v = y / (width - 1);
+        const px = Math.floor(u * (img.width - 1));
+        const py = Math.floor(v * (img.height - 1));
+        const idx = (py * img.width + px) * 4;
+
+        // Get grayscale value (0-255)
+        const height = imgData.data[idx] / 255;
+
+        // Apply to Z coordinate (plane is in XY, Z is up before rotation)
+        positions.setZ(i, height * scale);
+    }
+
+    positions.needsUpdate = true;
+    geometry.computeVertexNormals(); // Recalculate normals for proper lighting
 }
 
 // ===========================================

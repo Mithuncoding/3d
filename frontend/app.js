@@ -126,6 +126,7 @@ function init() {
         state.plane.add(state.planeModel);
 
         state.plane.visible = false;
+        state.plane.rotation.order = 'YXZ';  // Yaw-Pitch-Roll order for flight controls
         state.scene.add(state.plane);
     });
 
@@ -773,11 +774,11 @@ function animate() {
         if (state.keys['KeyW']) state.plane.rotation.x -= pitchSpeed * delta;
         if (state.keys['KeyS']) state.plane.rotation.x += pitchSpeed * delta;
 
-        // Bank when turning (visual roll)
+        // Bank when turning (visual roll) - auto-levels when released
         let targetBank = 0;
         if (state.keys['KeyA']) targetBank = bankAngle;
         if (state.keys['KeyD']) targetBank = -bankAngle;
-        state.plane.rotation.z = THREE.MathUtils.lerp(state.plane.rotation.z, targetBank, 0.1);
+        state.plane.rotation.z = THREE.MathUtils.lerp(state.plane.rotation.z, targetBank, 0.15);
 
         // Move plane forward in its facing direction
         const direction = new THREE.Vector3(0, 0, -1);

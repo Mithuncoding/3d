@@ -35,7 +35,8 @@ const state = {
     // Plane mode
     plane: null,
     planeModel: null,
-    planeMode: false
+    planeMode: false,
+    planeAudio: null
 };
 
 // ===========================================
@@ -112,6 +113,11 @@ function init() {
     water.position.y = -1;
     water.receiveShadow = true;
     state.scene.add(water);
+
+    // Initialize plane audio
+    state.planeAudio = new Audio('/static/assets/plane.mp3');
+    state.planeAudio.loop = true;
+    state.planeAudio.volume = 0.5;
 
     // Load plane model with wrapper for correct orientation
     const gltfLoader = new THREE.GLTFLoader();
@@ -198,6 +204,14 @@ function setupUI() {
     const rotSlider = document.getElementById('rotation');
     rotSlider.addEventListener('input', () => {
         document.getElementById('rotation-val').textContent = rotSlider.value + '%';
+    });
+
+    const volumeSlider = document.getElementById('plane-volume');
+    volumeSlider.addEventListener('input', () => {
+        document.getElementById('plane-volume-val').textContent = volumeSlider.value + '%';
+        if (state.planeAudio) {
+            state.planeAudio.volume = volumeSlider.value / 100;
+        }
     });
 
     // Lighting controls
@@ -748,12 +762,19 @@ function toggleFlyMode() {
             state.plane.position.set(0, 20, 0);
             state.plane.rotation.set(0, 0, 0);
         }
+        if (state.planeAudio) {
+            state.planeAudio.currentTime = 0;
+            state.planeAudio.play();
+        }
         document.getElementById('fly-btn').textContent = 'Exit Plane Mode';
     } else {
         // Exit plane mode
         state.planeMode = false;
         if (state.plane) {
             state.plane.visible = false;
+        }
+        if (state.planeAudio) {
+            state.planeAudio.pause();
         }
         document.getElementById('fly-btn').textContent = '✈️ Fly Plane';
         updateOrbitCamera();
@@ -769,6 +790,9 @@ async function toggleVoiceChat() {
         btn.textContent = '🎤 Start Voice Chat';
         btn.classList.remove('active');
         status.classList.add('hidden');
+        if (state.planeAudio) {
+            state.planeAudio.muted = false;
+        }
     } else {
         try {
             btn.textContent = 'Connecting...';
@@ -790,6 +814,9 @@ async function toggleVoiceChat() {
             btn.classList.add('active');
             btn.disabled = false;
             status.classList.remove('hidden');
+            if (state.planeAudio) {
+                state.planeAudio.muted = true;
+            }
         } catch (err) {
             console.error('Voice chat error:', err);
             setStatus('Voice chat failed: ' + err.message, 'error');

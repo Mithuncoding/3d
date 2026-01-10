@@ -9,7 +9,7 @@ const VoiceChat = (function() {
     let audioContext = null;
     let mediaStream = null;
     let sourceNode = null;
-    let scriptProcessor = null;
+    let workletNode = null;
     let active = false;
     let setupComplete = false;
 
@@ -116,7 +116,7 @@ Your role:
     function sendSetupMessage() {
         const setupMsg = {
             setup: {
-                model: "models/gemini-2.0-flash-exp",
+                model: "models/gemini-2.5-flash-native-audio-preview-12-2025",
                 generationConfig: {
                     responseModalities: ["AUDIO"],
                     speechConfig: {
@@ -168,7 +168,7 @@ Your role:
     }
 
     /**
-     * Start microphone capture
+     * Start microphone capture using AudioWorklet
      */
     async function startMicCapture() {
         try {
@@ -185,15 +185,17 @@ Your role:
                 sampleRate: SEND_SAMPLE_RATE
             });
 
+            // Load AudioWorklet module
+            await audioContext.audioWorklet.addModule('/static/audio-processor.js');
+
             sourceNode = audioContext.createMediaStreamSource(mediaStream);
+            workletNode = new AudioWorkletNode(audioContext, 'audio-capture-processor');
 
-            // Use ScriptProcessor for audio processing (deprecated but widely supported)
-            scriptProcessor = audioContext.createScriptProcessor(BUFFER_SIZE, 1, 1);
-
-            scriptProcessor.onaudioprocess = (event) => {
+            // Handle audio data from worklet
+            workletNode.port.onmessage = (event) => {
                 if (!active || !ws || ws.readyState !== WebSocket.OPEN) return;
 
-                const inputData = event.inputBuffer.getChannelData(0);
+                const inputData = event.data;
 
                 // Resample if needed
                 const outputData = resampleAudio(inputData, audioContext.sampleRate, SEND_SAMPLE_RATE);
@@ -208,10 +210,9 @@ Your role:
                 sendAudioChunk(base64Data);
             };
 
-            sourceNode.connect(scriptProcessor);
-            scriptProcessor.connect(audioContext.destination);
+            sourceNode.connect(workletNode);
 
-            console.log('[Voice] Microphone capture started');
+            console.log('[Voice] Microphone capture started (AudioWorklet)');
         } catch (e) {
             console.error('[Voice] Mic capture error:', e);
             throw e;
@@ -256,13 +257,14 @@ Your role:
     }
 
     /**
-     * Convert ArrayBuffer to base64 string
+     * Convert ArrayBuffer to base64 string (chunked for performance)
      */
     function arrayBufferToBase64(buffer) {
         const bytes = new Uint8Array(buffer);
+        const CHUNK_SIZE = 0x8000; // 32KB chunks to avoid call stack limits
         let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
+        for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
         }
         return btoa(binary);
     }
@@ -367,9 +369,9 @@ Your role:
      * Stop microphone capture
      */
     function stopMicCapture() {
-        if (scriptProcessor) {
-            scriptProcessor.disconnect();
-            scriptProcessor = null;
+        if (workletNode) {
+            workletNode.disconnect();
+            workletNode = null;
         }
 
         if (sourceNode) {

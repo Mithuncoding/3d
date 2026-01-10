@@ -30,7 +30,12 @@ const state = {
     orbitPhi: Math.PI / 4,
     isDragging: false,
     lastMouse: { x: 0, y: 0 },
-    keys: {}
+    keys: {},
+
+    // Plane mode
+    plane: null,
+    planeModel: null,
+    planeMode: false
 };
 
 // ===========================================
@@ -107,6 +112,22 @@ function init() {
     water.position.y = -1;
     water.receiveShadow = true;
     state.scene.add(water);
+
+    // Load plane model with wrapper for correct orientation
+    const gltfLoader = new THREE.GLTFLoader();
+    gltfLoader.load('/static/assets/plane.glb', (gltf) => {
+        // Create wrapper Object3D for movement (its -Z is forward)
+        state.plane = new THREE.Object3D();
+
+        // Add model as child with rotation offset to align visual forward
+        state.planeModel = gltf.scene;
+        state.planeModel.scale.set(0.25, 0.25, 0.25);
+        state.planeModel.rotation.y = Math.PI / 2;  // Rotate model to face wrapper's -Z
+        state.plane.add(state.planeModel);
+
+        state.plane.visible = false;
+        state.scene.add(state.plane);
+    });
 
     // Setup UI
     setupUI();
@@ -695,15 +716,26 @@ function updateOrbitCamera() {
 }
 
 function toggleFlyMode() {
-    const canvas = state.renderer.domElement;
     state.cameraMode = state.cameraMode === 'orbit' ? 'fly' : 'orbit';
 
-    document.getElementById('fly-btn').textContent =
-        state.cameraMode === 'orbit' ? 'Enter Fly Mode' : 'Exit Fly Mode';
-
     if (state.cameraMode === 'fly') {
-        state.camera.rotation.order = 'YXZ';
-        canvas.requestPointerLock();
+        // Enter plane mode
+        state.planeMode = true;
+        if (state.plane) {
+            state.plane.visible = true;
+            // Position plane above terrain center, wrapper at identity rotation
+            state.plane.position.set(0, 20, 0);
+            state.plane.rotation.set(0, 0, 0);
+        }
+        document.getElementById('fly-btn').textContent = 'Exit Plane Mode';
+    } else {
+        // Exit plane mode
+        state.planeMode = false;
+        if (state.plane) {
+            state.plane.visible = false;
+        }
+        document.getElementById('fly-btn').textContent = '✈️ Fly Plane';
+        updateOrbitCamera();
     }
 }
 
@@ -726,20 +758,46 @@ function animate() {
         updateOrbitCamera();
     }
 
-    // Fly mode movement
-    if (state.cameraMode === 'fly') {
-        const speed = state.keys['ShiftLeft'] ? 80 : 25;
-        const dir = new THREE.Vector3();
+    // Plane mode flight
+    if (state.cameraMode === 'fly' && state.planeMode && state.plane) {
+        const turnSpeed = 1.2;
+        const pitchSpeed = 0.8;
+        const forwardSpeed = 3;
+        const bankAngle = 0.5;
 
-        if (state.keys['KeyW']) dir.z -= 1;
-        if (state.keys['KeyS']) dir.z += 1;
-        if (state.keys['KeyA']) dir.x -= 1;
-        if (state.keys['KeyD']) dir.x += 1;
-        if (state.keys['Space']) dir.y += 1;
-        if (state.keys['KeyC']) dir.y -= 1;
+        // Yaw (turn left/right)
+        if (state.keys['KeyA']) state.plane.rotation.y += turnSpeed * delta;
+        if (state.keys['KeyD']) state.plane.rotation.y -= turnSpeed * delta;
 
-        dir.normalize().applyQuaternion(state.camera.quaternion);
-        state.camera.position.addScaledVector(dir, speed * delta);
+        // Pitch (nose up/down)
+        if (state.keys['KeyW']) state.plane.rotation.x -= pitchSpeed * delta;
+        if (state.keys['KeyS']) state.plane.rotation.x += pitchSpeed * delta;
+
+        // Bank when turning (visual roll)
+        let targetBank = 0;
+        if (state.keys['KeyA']) targetBank = bankAngle;
+        if (state.keys['KeyD']) targetBank = -bankAngle;
+        state.plane.rotation.z = THREE.MathUtils.lerp(state.plane.rotation.z, targetBank, 0.1);
+
+        // Move plane forward in its facing direction
+        const direction = new THREE.Vector3(0, 0, -1);
+        direction.applyQuaternion(state.plane.quaternion);
+        state.plane.position.addScaledVector(direction, forwardSpeed * delta);
+
+        // Check collision with terrain/water or out of bounds
+        const pos = state.plane.position;
+        const bounds = 50;
+        if (pos.y < 0 || Math.abs(pos.x) > bounds || Math.abs(pos.z) > bounds) {
+            // Reset plane to starting position
+            state.plane.position.set(0, 20, 0);
+            state.plane.rotation.set(0, 0, 0);
+        }
+
+        // Camera follows behind plane
+        const cameraOffset = new THREE.Vector3(0, 3, 8);
+        cameraOffset.applyQuaternion(state.plane.quaternion);
+        state.camera.position.copy(state.plane.position).add(cameraOffset);
+        state.camera.lookAt(state.plane.position);
     }
 
     state.renderer.render(state.scene, state.camera);

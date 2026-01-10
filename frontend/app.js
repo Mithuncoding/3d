@@ -162,7 +162,6 @@ function setupUI() {
 
     // Terrain buttons
     document.getElementById('fetch-dem-btn').addEventListener('click', fetchDEM);
-    document.getElementById('gemini-heightmap-btn').addEventListener('click', generateHeightmapWithGemini);
     document.getElementById('stylize-btn').addEventListener('click', stylizeTexture);
 
     // View controls
@@ -623,45 +622,6 @@ async function extractBoundsWithGemini() {
 
         hideLoading();
         setStatus('Bounds extracted', 'success');
-
-    } catch (err) {
-        hideLoading();
-        setStatus('Gemini error: ' + err.message, 'error');
-        console.error(err);
-    }
-}
-
-async function generateHeightmapWithGemini() {
-    if (!state.fileId) {
-        setStatus('Upload a file first', 'error');
-        return;
-    }
-
-    showLoading('Generating heightmap with Gemini...');
-    setStatus('Generating heightmap...', 'loading');
-
-    try {
-        const response = await fetch(`/api/generate-heightmap?file_id=${state.fileId}`, {
-            method: 'POST'
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || 'Failed to generate heightmap');
-        }
-
-        const data = await response.json();
-
-        // Load heightmap texture
-        const loader = new THREE.TextureLoader();
-        state.heightmapTexture = loader.load(
-            'data:image/png;base64,' + data.heightmap_b64,
-            () => {
-                createTerrain();
-                hideLoading();
-                setStatus('Heightmap generated', 'success');
-            }
-        );
 
     } catch (err) {
         hideLoading();

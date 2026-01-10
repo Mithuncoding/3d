@@ -28,62 +28,6 @@ def get_client():
     return genai.Client(api_key=api_key)
 
 
-async def generate_heightmap(image_path: str) -> str:
-    """
-    Use Gemini to generate a heightmap from a topographic map image.
-    
-    Returns: Base64 encoded PNG heightmap
-    """
-    client = get_client()
-    
-    # Read image
-    with open(image_path, "rb") as f:
-        image_data = f.read()
-    
-    # Determine mime type
-    ext = Path(image_path).suffix.lower()
-    mime_map = {
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp",
-        ".tif": "image/tiff",
-        ".tiff": "image/tiff",
-    }
-    mime_type = mime_map.get(ext, "image/jpeg")
-    
-    prompt = """Generate a pure grayscale heightmap from this topographic map.
-
-Rules:
-- Pure black (#000000) for all water bodies (ocean, lakes, rivers)
-- Pure black for map borders, legends, titles, margins, and any text
-- Only land areas have grayscale values
-- White = highest peaks, dark gray = lowest land elevations
-- Smooth gradients based on elevation contours and relief shading
-- Output should be the same dimensions as input
-- No labels, no artifacts, just clean elevation data
-
-Return ONLY the heightmap image."""
-
-    response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash-exp",
-        contents=[
-            types.Part.from_bytes(data=image_data, mime_type=mime_type),
-            prompt
-        ],
-        config=types.GenerateContentConfig(
-            response_modalities=["image", "text"],
-        )
-    )
-    
-    # Extract image from response
-    for part in response.candidates[0].content.parts:
-        if part.inline_data and part.inline_data.mime_type.startswith("image/"):
-            return base64.b64encode(part.inline_data.data).decode("utf-8")
-    
-    raise RuntimeError("No image in Gemini response")
-
-
 async def extract_bounds_from_image(image_path: str) -> dict:
     """
     Use Gemini to extract geographic bounds from a map image.

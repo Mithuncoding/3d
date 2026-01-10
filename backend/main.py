@@ -107,28 +107,6 @@ async def extract_bounds(file_id: str):
         raise HTTPException(500, f"Gemini error: {str(e)}")
 
 
-@app.post("/api/generate-heightmap")
-async def generate_heightmap(file_id: str):
-    """
-    Use Gemini to generate a heightmap from an uploaded map.
-    """
-    # Find the file
-    files = list(UPLOADS_DIR.glob(f"{file_id}.*"))
-    if not files:
-        raise HTTPException(404, "File not found")
-    
-    file_path = files[0]
-    
-    try:
-        heightmap_b64 = await gemini_client.generate_heightmap(str(file_path))
-        return JSONResponse({
-            "success": True,
-            "heightmap_b64": heightmap_b64
-        })
-    except Exception as e:
-        raise HTTPException(500, f"Gemini error: {str(e)}")
-
-
 @app.post("/api/narrate")
 async def narrate(location_info: dict, features: list[str] = []):
     """

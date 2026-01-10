@@ -2,7 +2,23 @@
 
 **Transform 2D topographic maps into explorable 3D terrain with an AI tour guide.**
 
+<p align="center">
+  <img src="assets/image1.png" width="49%" alt="Orbit view of Kauai terrain" />
+  <img src="assets/image2.png" width="49%" alt="Flying over terrain in plane mode" />
+</p>
+
 Upload a USGS topo map or GeoTIFF, and Contour builds a 3D flyable terrain you can explore while chatting with Gemini about what you're seeing.
+
+## Gemini Features Used
+
+| Feature | Gemini Capability | How It's Used |
+|---------|-------------------|---------------|
+| 🗺️ **Bounds Extraction** | Vision + Text | Gemini reads lat/lon coordinates from map borders and graticules |
+| 🎤 **Voice Tour Guide** | Live API (Bidirectional Audio) | Real-time voice conversation while flying over terrain |
+| 🧠 **Contextual Narration** | System Instructions | Guide knows map name, bounds, and current flight position |
+| 🔊 **Natural Speech** | Native Audio Output | Gemini speaks responses directly (Aoede voice) |
+
+---
 
 [**Watch Demo Video**](https://drive.google.com/file/d/1bTEDKPn7YTp_soc8YL3LzkOpFNMKOYcw/view?usp=sharing)
 

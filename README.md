@@ -4,7 +4,7 @@
 
 **Transform 2D topographic maps into explorable 3D terrain with Gemini Live API as a tour guide.**
 
-🚨🚨🚨 [**Watch Demo Video**](https://drive.google.com/file/d/1bTEDKPn7YTp_soc8YL3LzkOpFNMKOYcw/view?usp=sharing) 🚨🚨🚨 - I'll upload a better one asap!
+[**Watch Demo Video**](https://youtu.be/JCHi7UN37Rg)
 
 
 <p align="center">
@@ -35,8 +35,6 @@ Upload a topo map in JPG or GeoTIFF, and Contour builds a 3D flyable terrain you
 | 🗺️ **Bounds Extraction** | Gemini 2.0 Flash | Gemini reads lat/lon coordinates from map borders and graticules from JPGs|
 | 🎨 **Texture Stylization** | Nano Banana Pro (via fal.ai) | Adds hypsometric-tinted textures and colours |
 | 🎤 **Voice Tour Guide** | Gemini Live API | Real-time voice conversation while flying over terrain. Guide knows map name, bounds, and current flight position |
-
----
 
 ## Quick Start
 

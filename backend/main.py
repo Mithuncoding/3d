@@ -14,7 +14,6 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from . import terrain
 from . import gemini_client
 
 # Load environment variables
@@ -224,6 +223,7 @@ async def upload_map(file: UploadFile = File(...)):
     try:
         if ext in {".tif", ".tiff"}:
             # GeoTIFF - extract bounds and texture
+            from . import terrain
             data = terrain.extract_geotiff_data(str(save_path))
             return JSONResponse({
                 "success": True,
@@ -236,6 +236,7 @@ async def upload_map(file: UploadFile = File(...)):
             })
         else:
             # Regular image - just extract texture
+            from . import terrain
             data = terrain.extract_from_image(str(save_path))
             return JSONResponse({
                 "success": True,

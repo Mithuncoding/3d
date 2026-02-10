@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from . import gemini_client
+# from . import gemini_client
 
 # Load environment variables
 load_dotenv()
@@ -182,6 +182,7 @@ async def get_location_info(request: LocationInfoRequest):
     Get AI-generated information about a location using Gemini.
     """
     try:
+        from . import gemini_client
         info = await gemini_client.generate_location_info(
             request.name, request.lat, request.lon
         )
@@ -263,6 +264,7 @@ async def extract_bounds(file_id: str):
     file_path = files[0]
     
     try:
+        from . import gemini_client
         bounds = await gemini_client.extract_bounds_from_image(str(file_path))
         return JSONResponse({
             "success": True,
@@ -278,6 +280,7 @@ async def narrate(location_info: dict, features: list[str] = []):
     Generate narration for current flyover position.
     """
     try:
+        from . import gemini_client
         narration = await gemini_client.generate_narration(location_info, features)
         return JSONResponse({
             "success": True,
@@ -290,7 +293,11 @@ async def narrate(location_info: dict, features: list[str] = []):
 @app.get("/api/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "ok", "gemini": gemini_client.HAS_GEMINI}
+    try:
+        from . import gemini_client
+        return {"status": "ok", "gemini": gemini_client.HAS_GEMINI}
+    except Exception:
+        return {"status": "ok", "gemini": False}
 
 
 @app.get("/api/gemini-key")
@@ -431,6 +438,7 @@ Create a varied, interesting path that:
 4. Varies altitude and viewing angles
 """
         
+        from . import gemini_client
         if gemini_client.HAS_GEMINI:
             client = gemini_client.get_client()
             response = await client.aio.models.generate_content(

@@ -13,9 +13,9 @@ try:
     import rasterio
     from rasterio.warp import transform_bounds
     HAS_RASTERIO = True
-except ImportError:
+except Exception as e:
     HAS_RASTERIO = False
-    print("Warning: rasterio not installed. GeoTIFF georeferencing disabled.")
+    print(f"Warning: rasterio import failed ({e}). GeoTIFF georeferencing disabled.")
 
 
 def extract_geotiff_data(file_path: str) -> dict:

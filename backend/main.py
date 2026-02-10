@@ -361,28 +361,39 @@ async def get_peaks(request: BoundsRequest):
 @app.get("/api/satellite-tile")
 async def get_satellite_tile(z: int, x: int, y: int):
     """
-    Proxy satellite/aerial imagery tiles from free sources.
-    Uses ESRI World Imagery (free for visualization).
+    Proxy satellite/aerial imagery tiles with fallback.
+    Tries ArcGIS first, then Google Satellite.
     """
-    try:
-        # ESRI World Imagery - free for visualization
-        tile_url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                tile_url,
-                headers={"User-Agent": "Contour3DTerrainExplorer/1.0"},
-                timeout=15.0
-            )
-            response.raise_for_status()
-            
-            from fastapi.responses import Response
-            return Response(
-                content=response.content,
-                media_type="image/jpeg"
-            )
-    except Exception as e:
-        raise HTTPException(500, f"Tile fetch error: {str(e)}")
+    providers = [
+        # ArcGIS World Imagery
+        f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        # Google Satellite (mt1)
+        f"https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        # Google Satellite (mt2 fallback)
+        f"https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    ]
+
+    async with httpx.AsyncClient() as client:
+        for url in providers:
+            try:
+                response = await client.get(
+                    url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                    },
+                    timeout=5.0
+                )
+                if response.status_code == 200:
+                    from fastapi.responses import Response
+                    return Response(
+                        content=response.content,
+                        media_type="image/jpeg"
+                    )
+            except Exception:
+                continue
+    
+    # If all fail
+    raise HTTPException(503, "Could not fetch satellite tile from any provider")
 
 
 @app.post("/api/tour-waypoints")

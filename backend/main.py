@@ -366,12 +366,12 @@ async def get_satellite_tile(z: int, x: int, y: int):
     Tries ArcGIS first, then Google Satellite.
     """
     providers = [
-        # ArcGIS World Imagery
-        f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        # Google Satellite (mt1)
+        # Google Satellite (mt1) - Most reliable for cloud IPs
         f"https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         # Google Satellite (mt2 fallback)
         f"https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        # ArcGIS World Imagery (Fallback)
+        f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     ]
 
     async with httpx.AsyncClient() as client:
@@ -388,7 +388,11 @@ async def get_satellite_tile(z: int, x: int, y: int):
                     from fastapi.responses import Response
                     return Response(
                         content=response.content,
-                        media_type="image/jpeg"
+                        media_type="image/jpeg",
+                        headers={
+                            "Access-Control-Allow-Origin": "*",
+                            "Cache-Control": "public, max-age=86400"
+                        }
                     )
             except Exception:
                 continue

@@ -1,130 +1,155 @@
-# Contour ⛰️
+# 🌍 Contour - 3D Terrain Explorer
 
-**🏆 2nd Place out of 200 participants — Google Gemini 3 Hackathon 2026**
+**Transform any location on Earth into a stunning, explorable 3D terrain with real satellite imagery, flood simulation, and cinematic tours.**
 
-**Transform 2D topographic maps into explorable 3D terrain with Gemini Live API as a tour guide.**
+Built with 💖 by **Mithun**
 
-[**Watch Demo Video**](https://youtu.be/JCHi7UN37Rg)
+---
 
+## ✨ Features
 
-<p align="center">
-  <img src="assets/image1.png" width="49%" alt="Orbit view of Kauai terrain" />
-  <img src="assets/image2.png" width="49%" alt="Flying over terrain in plane mode" />
-</p>
+### 🛰️ Satellite Imagery
 
-Generated from:
-<p align="center">
-  <img src="assets/map.jpg" width="49%" alt="Original Map" />
-</p>
+- Real satellite textures from ESRI World Imagery
+- Automatic loading for photorealistic terrains
 
-Upload a topo map in JPG or GeoTIFF, and Contour builds a 3D flyable terrain you can explore while chatting with Gemini about what you're seeing.
+### 🌊 Flood Simulation
 
-## Features
+- Animated water level rising from lowest elevation
+- Shows real-time altitude and flooded area percentage
+- Watch water fill valleys like a real flood!
 
-- **📤 Upload any map** — GeoTIFF (auto-extracts bounds) or JPG/PNG (Gemini-extracted bounds)
-- **🗺️ Real elevation data** — Fetches DEM tiles from AWS Terrain Tiles
-- **🎮 Fly mode** — WASD + mouse to soar over your terrain
-- **🎤 Voice tour guide** — Talk to Gemini about the terrain using Live API
-- **🌄 Dynamic lighting** — Adjustable sun position for dramatic relief
+### 🎬 Cinematic Tour Mode
 
+- AI-generated scenic camera paths
+- Smooth camera interpolation
+- Adjustable speed (0.5× to 2×)
+- Perfect for showcasing landscapes
 
-## Gemini Features Used
+### 📍 Peak Markers
 
-| Feature | Gemini Capability | How It's Used |
-|---------|-------------------|---------------|
-| 🗺️ **Bounds Extraction** | Gemini 2.0 Flash | Gemini reads lat/lon coordinates from map borders and graticules from JPGs|
-| 🎨 **Texture Stylization** | Nano Banana Pro (via fal.ai) | Adds hypsometric-tinted textures and colours |
-| 🎤 **Voice Tour Guide** | Gemini Live API | Real-time voice conversation while flying over terrain. Guide knows map name, bounds, and current flight position |
+- Automatic detection of mountain peaks
+- Floating labels with names and elevations
+- Data from OpenStreetMap
 
-## Quick Start
+### 📏 Measurement Tools
+
+- Click-to-measure distances
+- Elevation profile visualization
+- Shows gain/loss statistics
+
+### ✈️ Advanced Fly Mode
+
+- WASD flight controls
+- Speed up (Shift) / Slow down (Ctrl)
+- Altitude controls (Space/C)
+- Terrain collision avoidance
+
+### 🔍 Smart Search
+
+- Search any location worldwide
+- Quick-start famous places
+- Real-time weather data
+
+### 🎤 Voice Tour Guide
+
+- Talk to Gemini AI about the terrain
+- Real-time voice conversation
+- Context-aware responses
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-# Clone and enter
-git clone <repo>
+# Clone
+git clone https://github.com/Mithuncoding/contour.git
 cd contour
 
-# Set up environment
+# Setup
 cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY and FAL_KEY
+# Add your GEMINI_API_KEY to .env
 
-# Install dependencies
+# Install & Run
 uv sync
-
-# Run
 uv run python run.py
 ```
 
 Open http://localhost:8000
 
-## Usage
+---
 
-1. **Upload a map** — Drop a GeoTIFF or JPG topo image
-2. **Set bounds** — Auto-detected for GeoTIFF, or click "Extract with Gemini" for JPG
-3. **Build terrain** — Click "Fetch Real DEM" to get elevation data
-4. **Explore** — Adjust scale, enter Fly Mode (WASD)
-5. **Talk to your guide** — Click "Start Voice Chat" and ask about the terrain
+## 🎮 Controls
 
-## Controls
+| Mode      | Control | Action         |
+| --------- | ------- | -------------- |
+| **Orbit** | Drag    | Rotate view    |
+| **Orbit** | Scroll  | Zoom in/out    |
+| **Fly**   | WASD    | Pitch and turn |
+| **Fly**   | Shift   | Speed up       |
+| **Fly**   | Ctrl    | Slow down      |
+| **Fly**   | Space   | Climb          |
+| **Fly**   | C       | Descend        |
 
-| Mode | Control | Action |
-|------|---------|--------|
-| Orbit | Drag | Rotate view |
-| Orbit | Scroll | Zoom in/out |
-| Fly | WASD | Pitch and turn |
+---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend**: Vanilla JS + Three.js (no build step)
+- **Frontend**: Vanilla JS + Three.js
 - **Backend**: FastAPI + Python
-- **Elevation**: AWS Terrain Tiles (Terrarium encoding)
-- **AI**: Gemini 2.0 Flash, Gemini Live API, fal.ai Nano Banana Pro
+- **Elevation**: AWS Terrain Tiles
+- **Satellite**: ESRI World Imagery
+- **Peaks**: OpenStreetMap Overpass API
+- **AI**: Google Gemini API
 
-## Project Structure
+---
+
+## 📁 Project Structure
 
 ```
 contour/
 ├── backend/
-│   ├── main.py          # FastAPI routes
-│   ├── terrain.py       # GeoTIFF processing
-│   ├── gemini_client.py # Gemini API calls
-│   └── fal_stylize.py   # Texture stylization
+│   ├── main.py           # FastAPI routes & endpoints
+│   ├── terrain.py        # GeoTIFF processing
+│   └── gemini_client.py  # Gemini API integration
 ├── frontend/
-│   ├── index.html       # UI
-│   ├── app.js           # Three.js scene + controls
-│   ├── voice.js         # Gemini Live API voice chat
-│   ├── audio-processor.js # AudioWorklet for mic capture
-│   └── style.css        # Styling
-├── run.py               # Entry point
-├── pyproject.toml       # Dependencies (uv)
-└── .env.example         # Environment template
+│   ├── index.html        # Main UI
+│   ├── app.js            # Three.js scene & features
+│   ├── voice.js          # Voice chat module
+│   └── style.css         # Styling
+└── run.py                # Entry point
 ```
 
-## Sample Data
+---
 
-USGS Historical Topographic Maps work great:
-- [USGS topoView](https://ngmdb.usgs.gov/topoview/viewer/)
-- Download GeoTIFF or high-res JPG
+## 🌟 APIs Used (All Free)
 
-## How It Works
+| API                    | Purpose            |
+| ---------------------- | ------------------ |
+| AWS Terrain Tiles      | Elevation data     |
+| ESRI World Imagery     | Satellite textures |
+| OpenStreetMap Overpass | Peak data          |
+| Open-Meteo             | Weather data       |
+| Nominatim              | Location search    |
+| Google Gemini          | AI features        |
 
-1. **Upload** → Extract texture + bounds from GeoTIFF (or image)
-2. **DEM Fetch** → Convert bounds to tile coords → fetch Terrarium PNGs → decode elevation
-3. **3D Build** → Create PlaneGeometry → displace vertices by elevation → apply map texture
-4. **Voice** → WebSocket to Gemini Live API → stream mic audio → receive spoken responses
+---
 
-## Known Limitations
+## 📸 Screenshots
 
-- Voice chat exposes API key to browser (fine for demo, not production)
-- DEM resolution limited to zoom 11 (~30m)
-- Large GeoTIFFs may be slow to process
+Coming soon...
 
-## Credits
+---
 
-- Elevation tiles: [Mapzen/AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
-- Maps: [USGS National Map](https://www.usgs.gov/programs/national-geospatial-program/national-map)
-- 3D: [Three.js](https://threejs.org/)
-- AI: [Google Gemini](https://ai.google.dev/), [fal.ai](https://fal.ai/)
+## 🙏 Credits
 
-## License
+- Elevation: [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
+- Satellite: [ESRI World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9)
+- 3D Engine: [Three.js](https://threejs.org/)
+- AI: [Google Gemini](https://ai.google.dev/)
 
-Apache 2.0
+---
+
+<p align="center">
+  Built with 💖 by <strong>Mithun</strong>
+</p>

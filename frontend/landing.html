@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contour - World-Class Exploration</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --accent: #ff0055;
+            --bg: #050510;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+            width: 100vw;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* Overlay UI */
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, transparent 0%, var(--bg) 150%);
+            pointer-events: none;
+        }
+
+        /* Hero Text */
+        .hero-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(4rem, 15vw, 12rem);
+            font-weight: 900;
+            line-height: 0.9;
+            text-transform: uppercase;
+            text-align: center;
+            letter-spacing: -0.05em;
+            color: transparent;
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+            position: relative;
+            mix-blend-mode: overlay;
+            opacity: 0;
+            transform: translateY(50px);
+        }
+
+        .hero-title::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            color: white;
+            -webkit-text-stroke: 0;
+            opacity: 0.8;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+            animation: glitch 5s infinite;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            text-transform: uppercase;
+            letter-spacing: 0.5em;
+            margin-top: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            color: var(--primary);
+            text-shadow: 0 0 20px var(--primary);
+        }
+
+        /* CTA Button */
+        .enter-btn-container {
+            margin-top: 4rem;
+            pointer-events: auto;
+            opacity: 0;
+        }
+
+        .enter-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1.5rem 4rem;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .enter-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .enter-btn:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.3);
+            text-shadow: 0 0 10px white;
+            letter-spacing: 0.3em;
+        }
+
+        .enter-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            animation: fadeIn 1s 2s forwards;
+            z-index: 20;
+        }
+
+        .scroll-indicator span {
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            margin-top: 1rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .mouse {
+            width: 30px;
+            height: 50px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            position: relative;
+        }
+
+        .mouse::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            animation: scroll 1.5s infinite;
+        }
+
+        /* Features Section */
+        .features-section {
+            position: relative;
+            z-index: 20;
+            background: linear-gradient(to bottom, transparent, var(--bg) 20%);
+            padding-top: 100px;
+            padding-bottom: 50px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2rem, 5vw, 4rem);
+            text-align: center;
+            margin-bottom: 4rem;
+            color: white;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+            opacity: 0; 
+            transform: translateY(30px);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 6rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2.5rem;
+            border-radius: 0;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px) !important;
+            border-color: var(--primary);
+            box-shadow: 0 10px 40px rgba(0, 242, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+        }
+
+        .feature-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .feature-card p {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+        }
+
+        .footer-cta {
+            text-align: center;
+            margin-bottom: 4rem;
+            opacity: 0;
+            transform: translateY(30px);
+            pointer-events: auto;
+        }
+        
+        .footer-cta h2 {
+            font-family: 'Orbitron', sans-serif;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+
+        .credits {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 0.1em;
+        }
+        
+        .credits strong {
+            color: white;
+            text-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Loading */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+        }
+
+        /* Animations */
+        @keyframes glitch {
+            0% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%); transform: translate(0); }
+            2% { clip-path: polygon(0 20%, 100% 20%, 100% 30%, 0% 30%); transform: translate(-2px, 2px); }
+            4% { clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0% 65%); transform: translate(2px, -2px); }
+            5% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%); transform: translate(0); }
+            100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%); transform: translate(0); }
+        }
+
+        @keyframes scroll {
+            0% { top: 10px; opacity: 1; }
+            100% { top: 30px; opacity: 0; }
+        }
+
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* ============================================
+           LANDING PAGE - MOBILE RESPONSIVE
+           ============================================ */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: clamp(2.5rem, 12vw, 6rem);
+            }
+
+            .subtitle {
+                font-size: clamp(0.7rem, 1.5vw, 1rem);
+                letter-spacing: 0.3em;
+                margin-top: 1.2rem;
+            }
+
+            .enter-btn-container {
+                margin-top: 2.5rem;
+            }
+
+            .enter-btn {
+                padding: 1.2rem 2.5rem;
+                font-size: 0.9rem;
+                letter-spacing: 0.15em;
+            }
+
+            .features-section {
+                padding-top: 60px;
+                padding-bottom: 30px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1.2rem;
+                margin-bottom: 3rem;
+            }
+
+            .feature-card {
+                padding: 1.8rem;
+            }
+
+            .feature-icon {
+                font-size: 2.2rem;
+                margin-bottom: 1rem;
+            }
+
+            .feature-card h3 {
+                font-size: 1.2rem;
+            }
+
+            .feature-card p {
+                font-size: 0.9rem;
+            }
+
+            .section-title {
+                font-size: clamp(1.5rem, 4vw, 2.5rem);
+                margin-bottom: 2.5rem;
+            }
+
+            .footer-cta h2 {
+                font-size: 1.4rem;
+            }
+
+            .scroll-indicator {
+                bottom: 1rem;
+            }
+
+            .mouse {
+                width: 24px;
+                height: 40px;
+            }
+
+            .container {
+                padding: 0 16px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .hero-title {
+                font-size: clamp(2rem, 10vw, 4rem);
+            }
+
+            .enter-btn {
+                padding: 1rem 2rem;
+                font-size: 0.8rem;
+            }
+
+            .feature-card {
+                padding: 1.4rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="loader">INITIALIZING SYSTEM...</div>
+
+    <div id="canvas-container"></div>
+
+    <div class="ui-layer">
+        <h1 class="hero-title" data-text="CONTOUR">CONTOUR</h1>
+        <div class="subtitle">BEYOND THE HORIZON</div>
+        
+        <div class="enter-btn-container">
+            <button class="enter-btn" onclick="window.location.href='/app'">
+                Initialize
+            </button>
+        </div>
+
+        <div class="scroll-indicator">
+            <div class="mouse"></div>
+            <span>SCROLL TO EXPLORE</span>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <h2 class="section-title">SYSTEM CAPABILITIES</h2>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🏔️</div>
+                    <h3>Himalaya Explorer</h3>
+                    <p>Direct access to all 14 eight-thousanders. Explore Everest, K2, and Kangchenjunga in high-fidelity 3D.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛰️</div>
+                    <h3>Satellite Intelligence</h3>
+                    <p>Real-time integration with ESRI World Imagery for photorealistic terrain mapping and analysis.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌊</div>
+                    <h3>Flood Simulation</h3>
+                    <p>Advanced hydrological modeling to visualize rising water levels and potential impact zones.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎥</div>
+                    <h3>Cinematic DVR</h3>
+                    <p>Automated camera path generation and high-quality WebM video export for cinematic tours.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">✈️</div>
+                    <h3>Flight Dynamics</h3>
+                    <p>Physics-based flight controls with terrain following, altitude hold, and variable speed.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI Guide</h3>
+                    <p>Context-aware voice guidance powered by Gemini Live API for real-time geographic insights.</p>
+                </div>
+            </div>
+
+            <div class="footer-cta">
+                <h2>READY FOR DEPLOYMENT?</h2>
+                <button class="enter-btn" onclick="window.location.href='/app'">
+                    Launch Explorer
+                </button>
+            </div>
+        </div>
+        
+        <div class="credits">
+            BUILT WITH 💖 BY <strong>MITHUN</strong>
+        </div>
+    </section>
+
+    <script>
+        // Three.js Scene Setup to create a "World Class" entrance
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050510, 0.002);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 30;
+        camera.position.y = 10;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Terrain Geometry (Procedural Grid)
+        const geometry = new THREE.PlaneGeometry(200, 200, 60, 60);
+        const count = geometry.attributes.position.count;
+        
+        // Add random variation
+        let randoms = new Float32Array(count);
+        for(let i = 0; i < count; i++) {
+            randoms[i] = Math.random();
+        }
+        geometry.setAttribute('randoms', new THREE.BufferAttribute(randoms, 1));
+
+        // Wireframe Material with Shader for glowing pulse effect
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                color: { value: new THREE.Color(0x00f2ff) }
+            },
+            vertexShader: `
+                uniform float time;
+                attribute float randoms;
+                varying float vElevation;
+
+                void main() {
+                    vec3 pos = position;
+                    // Create moving wave effect using sin/cos and time
+                    float wave = sin(pos.x * 0.1 + time) * cos(pos.y * 0.1 + time) * 5.0;
+                    // Add noise-like movement
+                    pos.z += wave + (sin(time * 2.0 + randoms * 10.0) * 2.0);
+                    
+                    vElevation = pos.z;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float time;
+                uniform vec3 color;
+                varying float vElevation;
+
+                void main() {
+                    // Fade out in distance
+                    float alpha = 1.0 - smoothstep(-10.0, 30.0, vElevation);
+                    
+                    // Pulse brighter on peaks
+                    vec3 finalColor = color + vec3(vElevation * 0.1);
+                    
+                    gl_FragColor = vec4(finalColor, 0.3 + (vElevation * 0.05));
+                }
+            `,
+            wireframe: true,
+            transparent: true,
+            side: THREE.DoubleSide
+        });
+
+        const terrain = new THREE.Mesh(geometry, material);
+        terrain.rotation.x = -Math.PI / 2;
+        scene.add(terrain);
+
+        // Particles System
+        const particlesGeo = new THREE.BufferGeometry();
+        const particleCount = 2000;
+        const posArray = new Float32Array(particleCount * 3);
+        
+        for(let i = 0; i < particleCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 100;
+        }
+        
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMat = new THREE.PointsMaterial({
+            size: 0.15,
+            color: 0xff0055,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const particles = new THREE.Points(particlesGeo, particlesMat);
+        scene.add(particles);
+
+        // Animation Loop
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+            
+            // Update uniforms
+            material.uniforms.time.value = time;
+            
+            // Rotate particles slowly
+            particles.rotation.y = time * 0.05;
+            particles.rotation.x = time * 0.02;
+
+            // Camera Movement (Subtle floating)
+            camera.position.x = Math.sin(time * 0.2) * 5;
+            
+            // Merge subtle float with scroll movement
+            const scrolled = window.scrollY;
+            camera.position.y = (10 - scrolled * 0.02) + Math.cos(time * 0.3) * 2;
+            camera.position.z = Math.max(5, 30 - scrolled * 0.015);
+
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Responsive resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Entrance Animation with GSAP
+        window.addEventListener('load', () => {
+            const tl = gsap.timeline();
+
+            // Fade out loader
+            tl.to("#loader", {
+                duration: 1,
+                opacity: 0,
+                onComplete: () => document.getElementById('loader').style.display = 'none'
+            })
+            // Reveal Text
+            .to(".hero-title", {
+                duration: 1.5,
+                opacity: 1,
+                y: 0,
+                ease: "power4.out"
+            })
+            .to(".subtitle", {
+                duration: 1,
+                opacity: 1,
+                y: 0,
+                ease: "power2.out"
+            }, "-=1.0")
+            // Reveal Button
+            .to(".enter-btn-container", {
+                duration: 1,
+                opacity: 1,
+                y: 0,
+                ease: "power2.out"
+            }, "-=0.5");
+        });
+
+        // Scroll Interactions
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY;
+            
+            // Fade out hero title
+            const heroTitle = document.querySelector('.hero-title');
+            const subtitle = document.querySelector('.subtitle');
+            const enterBtn = document.querySelector('.enter-btn-container');
+
+            if(heroTitle) heroTitle.style.opacity = Math.max(0, 1 - scrolled / 300);
+            if(subtitle) subtitle.style.opacity = Math.max(0, 1 - scrolled / 300);
+            if(enterBtn) enterBtn.style.opacity = Math.max(0, 1 - scrolled / 300);
+        });
+
+        // Intersection Observer for animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    gsap.to(entry.target, {
+                        opacity: 1,
+                        y: 0,
+                        duration: 1,
+                        ease: "power3.out"
+                    });
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.section-title, .feature-card, .footer-cta').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Interactive Mouse Effect
+        let mouseX = 0;
+        let mouseY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX - window.innerWidth / 2) * 0.001;
+            mouseY = (e.clientY - window.innerHeight / 2) * 0.001;
+            
+            // Tilt terrain slightly based on mouse
+            gsap.to(terrain.rotation, {
+                x: -Math.PI / 2 + mouseY * 0.5,
+                y: mouseX * 0.5,
+                duration: 1
+            });
+        });
+
+    </script>
+</body>
+</html>

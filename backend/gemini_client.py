@@ -1,5 +1,5 @@
 """
-Gemini API client for heightmap generation and narration
+Gemini API client for terrain explorer features
 """
 
 import os
@@ -14,6 +14,9 @@ try:
 except ImportError:
     HAS_GEMINI = False
     print("Warning: google-genai not installed. Gemini features disabled.")
+
+# Model to use - latest Gemini 3 Flash (Preview)
+MODEL_NAME = "gemini-3-flash-preview"
 
 
 def get_client():
@@ -55,7 +58,7 @@ Return ONLY a JSON object in this exact format, no other text:
 Use decimal degrees. West longitudes are negative. Be as precise as possible."""
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash-exp",
+        model=MODEL_NAME,
         contents=[
             types.Part.from_bytes(data=image_data, mime_type=mime_type),
             prompt
@@ -98,8 +101,76 @@ Focus on interesting geographic, historical, or natural facts.
 Be conversational and enthusiastic but not over the top."""
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash-exp",
+        model=MODEL_NAME,
         contents=[prompt]
     )
     
     return response.text.strip()
+
+
+async def generate_location_info(location_name: str, lat: float, lon: float) -> dict:
+    """
+    Generate comprehensive, engaging information about a location using Gemini.
+    
+    Returns: {"title": str, "description": str, "facts": list[str], "highlights": list[str]}
+    """
+    client = get_client()
+    
+    prompt = f"""You are a world-class geographic expert, historian, and travel writer. Create comprehensive, engaging information about this location.
+
+Location: {location_name}
+Coordinates: {lat:.4f}°, {lon:.4f}°
+
+Generate rich, fascinating content that would appear in a premium travel documentary or National Geographic article.
+
+Return a JSON object with:
+{{
+    "title": "Official/common name, include alt names if famous (e.g., 'Mount Everest (Sagarmatha / Chomolungma)')",
+    "description": "4-6 sentence vivid, engaging description that paints a picture of this place. Include sensory details, what makes it special, and why people are drawn here.",
+    "facts": [
+        "🏔️ [Geology/Geography fact with specific numbers]",
+        "📜 [Historical fact with dates and names]", 
+        "🌍 [Global significance or records]",
+        "🦅 [Wildlife or ecosystem fact]",
+        "👥 [Cultural or human interest fact]",
+        "⚡ [Surprising or mind-blowing fact]"
+    ],
+    "highlights": [
+        "🎯 [Must-see feature or viewpoint]",
+        "📸 [Best photo opportunity]",
+        "🚶 [Notable trail or route]"
+    ],
+    "elevation_info": "Detailed terrain description - elevation range, notable peaks, valleys, geological formations",
+    "best_time": "Best time to visit and why",
+    "fun_fact": "One fascinating fact that most people don't know"
+}}
+
+Make it educational, inspiring, and memorable. Use emojis for facts/highlights. Only return the JSON."""
+
+    response = await client.aio.models.generate_content(
+        model=MODEL_NAME,
+        contents=[prompt]
+    )
+    
+    import json
+    text = response.text.strip()
+    
+    # Handle markdown code blocks
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    
+    try:
+        return json.loads(text.strip())
+    except json.JSONDecodeError:
+        return {
+            "title": location_name,
+            "description": "Explore this fascinating terrain in 3D. This location offers unique geographic features waiting to be discovered.",
+            "facts": ["🌍 Loading detailed information..."],
+            "highlights": [],
+            "elevation_info": "",
+            "best_time": "",
+            "fun_fact": ""
+        }
+

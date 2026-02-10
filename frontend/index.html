@@ -1,134 +1,448 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contour - 3D Terrain Explorer</title>
+    <meta
+      name="description"
+      content="Explore any location on Earth in stunning 3D. Search places, fly over terrain, and discover the world."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏔️</text></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contour - 2D Maps to 3D Terrain</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>">
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-
-<body>
+  <body>
     <div id="container"></div>
 
-    <!-- Control Panel -->
-    <div id="controls">
-        <h1>🗺️ Contour</h1>
-        <p class="subtitle">2D Maps → 3D Terrain</p>
+    <!-- Mobile Menu Toggle -->
+    <button id="menu-toggle" aria-label="Toggle menu">&#9776;</button>
+    <div id="menu-overlay"></div>
 
-        <!-- Upload Section -->
-        <section id="upload-section">
-            <h3 data-step-label="Upload Map"></h3>
-            <div id="drop-zone">
-                <p>Drop GeoTIFF or image<br><small>or click to browse</small></p>
-                <input type="file" id="file-input" accept=".tif,.tiff,.jpg,.jpeg,.png,.webp">
-            </div>
-            <div id="file-info" class="hidden">
-                <span id="file-name"></span>
-                <span id="file-bounds" class="badge"></span>
-            </div>
-        </section>
+    <!-- Floating Home Button (Always Visible) -->
+    <a href="/" id="floating-home-btn" title="Back to Landing Page">🏠</a>
 
-        <!-- Bounds Section (for non-GeoTIFF) -->
-        <section id="bounds-section" class="hidden">
-            <h3 data-step-label="Set Bounds"></h3>
-            <div class="bounds-grid">
-                <div class="input-group">
-                    <label>North</label>
-                    <input type="number" id="north" step="0.0001" placeholder="e.g. 22.5">
-                </div>
-                <div class="input-group">
-                    <label>South</label>
-                    <input type="number" id="south" step="0.0001" placeholder="e.g. 22.5">
-                </div>
-                <div class="input-group">
-                    <label>West</label>
-                    <input type="number" id="west" step="0.0001" placeholder="e.g. 22.5">
-                </div>
-                <div class="input-group">
-                    <label>East</label>
-                    <input type="number" id="east" step="0.0001" placeholder="e.g. 22.5">
-                </div>
-            </div>
-            <button class="secondary" id="extract-bounds-btn">🤖 Extract with Gemini</button>
-        </section>
-
-        <!-- Terrain Section -->
-        <section id="terrain-section" class="hidden">
-            <h3 data-step-label="Build Terrain"></h3>
-            <button class="primary" id="fetch-dem-btn">Fetch Real DEM</button>
-            <button class="secondary" id="stylize-btn">🎨 Stylize Texture</button>
-        </section>
-
-        <!-- View Controls -->
-        <section id="view-section" class="hidden">
-            <h3 data-step-label="Explore"></h3>
-            <div class="slider-group">
-                <label>Elevation Scale</label>
-                <input type="range" id="exag" min="1" max="80" value="7">
-                <span class="value" id="exag-val">7×</span>
-            </div>
-            <div class="slider-group">
-                <label>Rotation Speed</label>
-                <input type="range" id="rotation" min="0" max="100" value="0">
-                <span class="value" id="rotation-val">0%</span>
-            </div>
-            <div class="slider-group">
-                <label>Plane Volume</label>
-                <input type="range" id="plane-volume" min="0" max="100" value="50">
-                <span class="value" id="plane-volume-val">50%</span>
-            </div>
-            <button class="secondary" id="fly-btn">✈️ Fly Plane</button>
-        </section>
-
-        <!-- Lighting Controls -->
-        <section id="lighting-section" class="hidden">
-            <h3 data-step-label="Lighting"></h3>
-            <div class="slider-group">
-                <label>Sun Azimuth</label>
-                <input type="range" id="sun-azimuth" min="0" max="360" value="135">
-                <span class="value" id="sun-azimuth-val">135°</span>
-            </div>
-            <div class="slider-group">
-                <label>Sun Elevation</label>
-                <input type="range" id="sun-elevation" min="10" max="90" value="47">
-                <span class="value" id="sun-elevation-val">47°</span>
-            </div>
-            <button class="secondary" id="reset-sun-btn">Reset to Default</button>
-        </section>
-
-        <!-- Voice Chat Section -->
-        <section id="voice-section" class="hidden">
-            <h3 data-step-label="Tour Guide"></h3>
-            <button class="secondary" id="voice-btn">🎤 Start Voice Chat</button>
-            <div id="voice-status" class="hidden">
-                <span class="voice-indicator"></span>
-                <span id="voice-status-text">Listening...</span>
-            </div>
-        </section>
-
-        <div id="status"></div>
+    <!-- Top Search Bar -->
+    <div id="search-bar">
+      <div class="search-wrapper">
+        <div class="search-icon">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="M21 21l-4.35-4.35"></path>
+          </svg>
+        </div>
+        <input
+          type="text"
+          id="location-search"
+          placeholder="Search any place on Earth..."
+          autocomplete="off"
+        />
+        <div id="search-suggestions" class="hidden"></div>
+      </div>
+      <div class="famous-places-wrapper">
+        <select id="famous-places">
+          <option value="">✨ Famous Places</option>
+        </select>
+      </div>
     </div>
 
-    <!-- Info Panel -->
+    <!-- Location Info Panel (Top Right) -->
+    <div id="location-panel" class="hidden">
+      <div class="location-header">
+        <h2 id="location-title">Location</h2>
+        <button id="close-location-panel" class="icon-btn">×</button>
+      </div>
+      
+      <div id="location-content" class="custom-scrollbar">
+        <p id="location-description"></p>
+        
+        <div class="location-details-grid">
+          <div class="detail-section">
+            <h4>Highlights</h4>
+            <div id="location-highlights" class="highlights-list"></div>
+          </div>
+          
+          <div class="detail-section">
+            <h4>Quick Facts</h4>
+            <div id="location-facts"></div>
+          </div>
+
+          <div class="detail-section">
+            <h4>Geography</h4>
+            <p id="location-elevation" class="detail-content"></p>
+          </div>
+
+          <div class="detail-section">
+            <h4>Best Time to Visit</h4>
+            <p id="location-best-time" class="detail-content"></p>
+          </div>
+        </div>
+
+        <div id="location-fun-fact" class="fun-fact-box hidden">
+          <h4>💡 Did You Know?</h4>
+          <p></p>
+        </div>
+
+        <div id="weather-info" class="hidden">
+          <h4>Current Weather</h4>
+          <div class="weather-current">
+            <span id="weather-temp"></span>
+            <span id="weather-condition"></span>
+          </div>
+          <div class="weather-details">
+            <span id="weather-wind"></span>
+            <span id="weather-humidity"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Control Panel (Left Side) -->
+    <div id="controls">
+      <div class="panel-header">
+        <div class="panel-header-row">
+          <a href="/" class="title-link"><h1>🏔️ Contour</h1></a>
+          <a href="/" id="home-btn" title="Back to Home">🏠</a>
+        </div>
+        <p class="subtitle">3D Terrain Explorer</p>
+      </div>
+
+      <!-- Quick Actions -->
+      <section id="quick-actions">
+        <div class="action-row">
+          <button class="action-btn" id="fly-btn">
+            <span class="action-icon">✈️</span>
+            <span>Fly Mode</span>
+          </button>
+          <button class="action-btn" id="tour-btn">
+            <span class="action-icon">🎬</span>
+            <span>Tour Mode</span>
+          </button>
+        </div>
+        <div class="action-row">
+          <button class="action-btn" id="measure-btn">
+            <span class="action-icon">📏</span>
+            <span>Measure</span>
+          </button>
+          <button class="action-btn" id="satellite-btn">
+            <span class="action-icon">🛰️</span>
+            <span>Satellite</span>
+          </button>
+        </div>
+        <div class="action-row">
+          <button class="action-btn" id="screenshot-btn">
+            <span class="action-icon">📸</span>
+            <span>Screenshot</span>
+          </button>
+          <button class="action-btn" id="ai-info-btn">
+            <span class="action-icon">🌍</span>
+            <span>Location Info</span>
+          </button>
+        </div>
+        <div class="action-row">
+          <button class="action-btn" id="voice-btn">
+            <span class="action-icon">💬</span>
+            <span>AI Chat</span>
+          </button>
+          <button class="action-btn himalaya-btn" id="himalaya-btn">
+            <span class="action-icon">🏔️</span>
+            <span>Himalayas</span>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- Atmosphere / Time of Day -->
+      <section id="time-section">
+        <h3>Atmosphere</h3>
+        <div class="time-presets">
+          <button class="time-card" data-time="dawn" title="Dawn">
+            <div class="time-card-icon">🌅</div>
+            <span class="time-card-label">Dawn</span>
+          </button>
+          <button class="time-card active" data-time="noon" title="Noon">
+            <div class="time-card-icon">☀️</div>
+            <span class="time-card-label">Noon</span>
+          </button>
+          <button class="time-card" data-time="golden" title="Golden Hour">
+            <div class="time-card-icon">🌤️</div>
+            <span class="time-card-label">Golden</span>
+          </button>
+          <button class="time-card" data-time="sunset" title="Sunset">
+            <div class="time-card-icon">🌇</div>
+            <span class="time-card-label">Sunset</span>
+          </button>
+          <button class="time-card" data-time="night" title="Night">
+            <div class="time-card-icon">🌙</div>
+            <span class="time-card-label">Night</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Terrain Controls -->
+      <section id="terrain-section">
+        <h3>Terrain</h3>
+        <div class="slider-group">
+          <label>Elevation Scale</label>
+          <input type="range" id="exag" min="1" max="80" value="15" />
+          <span class="value" id="exag-val">15×</span>
+        </div>
+        <div class="slider-group">
+          <label>Rotation</label>
+          <input type="range" id="rotation" min="0" max="100" value="0" />
+          <span class="value" id="rotation-val">0%</span>
+        </div>
+      </section>
+
+      <!-- Water/Flood Simulation -->
+      <section id="water-section">
+        <h3>🌊 Flood Simulation</h3>
+        <div class="slider-group water-slider">
+          <label>Water Level</label>
+          <input type="range" id="water-level" min="0" max="100" value="0" />
+          <span class="value" id="water-level-val">0%</span>
+        </div>
+        <div class="water-controls">
+          <button class="water-btn" id="water-animate">▶️ Animate Flood</button>
+          <button class="water-btn" id="water-reset">🔄 Reset</button>
+        </div>
+        <div class="water-info" id="water-info">
+          <span id="water-alt">Altitude: 0m</span>
+          <span id="water-area">Area: 0%</span>
+        </div>
+      </section>
+
+      <!-- Upload Section (Collapsible) -->
+      <section id="upload-section">
+        <h3 class="collapsible">
+          <span>📤 Upload Custom Map</span>
+          <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="collapsible-content hidden">
+          <div id="drop-zone">
+            <p>Drop GeoTIFF or image<br /><small>or click to browse</small></p>
+            <input
+              type="file"
+              id="file-input"
+              accept=".tif,.tiff,.jpg,.jpeg,.png,.webp"
+            />
+          </div>
+          <div id="file-info" class="hidden">
+            <span id="file-name"></span>
+            <span id="file-bounds" class="badge"></span>
+          </div>
+          <div id="bounds-section" class="hidden">
+            <div class="bounds-grid">
+              <div class="input-group">
+                <label>North</label>
+                <input type="number" id="north" step="0.0001" />
+              </div>
+              <div class="input-group">
+                <label>South</label>
+                <input type="number" id="south" step="0.0001" />
+              </div>
+              <div class="input-group">
+                <label>West</label>
+                <input type="number" id="west" step="0.0001" />
+              </div>
+              <div class="input-group">
+                <label>East</label>
+                <input type="number" id="east" step="0.0001" />
+              </div>
+            </div>
+            <button class="secondary" id="extract-bounds-btn">
+              🤖 Extract with Gemini
+            </button>
+          </div>
+          <button class="primary hidden" id="fetch-dem-btn">
+            Build 3D Terrain
+          </button>
+        </div>
+      </section>
+
+      <!-- Voice Status -->
+      <div id="voice-status" class="hidden">
+        <span class="voice-indicator"></span>
+        <span id="voice-status-text">Listening...</span>
+      </div>
+
+      <div id="status"></div>
+    </div>
+
+    <!-- Info Panel (Bottom) -->
     <div id="info">
-        <strong>Controls:</strong>
-        <kbd>Drag</kbd> Rotate · <kbd>Scroll</kbd> Zoom ·
-        Fly: <kbd>WASD</kbd> <kbd>Space</kbd>/<kbd>C</kbd>
+      <strong>Controls:</strong>
+      <kbd>Drag</kbd> Rotate · <kbd>Scroll</kbd> Zoom · Fly: <kbd>WASD</kbd> ·
+      <kbd>Space</kbd>/<kbd>C</kbd> Up/Down
+    </div>
+
+    <!-- Coordinates Display -->
+    <div id="coords" class="hidden">
+      <span id="coord-lat"></span>
+      <span id="coord-lon"></span>
+      <span id="coord-alt"></span>
+    </div>
+
+    <!-- Tour Controls Overlay -->
+    <div id="tour-controls" class="hidden">
+      <div class="tour-header">
+        <span>🎬 Cinematic Tour</span>
+        <button id="tour-close" class="icon-btn">×</button>
+      </div>
+      <div class="tour-progress">
+        <div class="tour-progress-bar" id="tour-progress-bar"></div>
+      </div>
+      <div class="tour-buttons">
+        <button id="tour-play" class="tour-control-btn">▶️ Play</button>
+        <button id="tour-pause" class="tour-control-btn hidden">
+          ⏸️ Pause
+        </button>
+        <button id="tour-restart" class="tour-control-btn">🔄 Restart</button>
+        <button id="tour-mp4" class="tour-control-btn">🎥 MP4</button>
+      </div>
+      <div class="tour-speed">
+        <label>Speed:</label>
+        <input
+          type="range"
+          id="tour-speed"
+          min="0.5"
+          max="2"
+          step="0.25"
+          value="1"
+        />
+        <span id="tour-speed-val">1×</span>
+      </div>
+    </div>
+
+    <!-- Measurement Panel -->
+    <div id="measure-panel" class="hidden">
+      <div class="measure-header">
+        <span>📏 Measurement</span>
+        <button id="measure-close" class="icon-btn">×</button>
+      </div>
+      <div class="measure-info">
+        <div class="measure-stat">
+          <label>Distance</label>
+          <span id="measure-distance">0 km</span>
+        </div>
+        <div class="measure-stat">
+          <label>Elevation Gain</label>
+          <span id="measure-elevation-gain">+0 m</span>
+        </div>
+        <div class="measure-stat">
+          <label>Elevation Loss</label>
+          <span id="measure-elevation-loss">-0 m</span>
+        </div>
+      </div>
+      <div class="measure-instructions">
+        Click two points on the terrain to measure
+      </div>
+      <button id="measure-clear" class="secondary">Clear Points</button>
+    </div>
+
+    <!-- Elevation Profile -->
+    <div id="elevation-profile" class="hidden">
+      <div class="profile-header">
+        <span>📈 Elevation Profile</span>
+        <button id="profile-close" class="icon-btn">×</button>
+      </div>
+      <canvas id="elevation-canvas" width="400" height="150"></canvas>
+      <div class="profile-stats">
+        <span id="profile-min">Min: 0m</span>
+        <span id="profile-max">Max: 0m</span>
+      </div>
+    </div>
+
+    <!-- Peak Info Tooltip -->
+    <div id="peak-tooltip" class="hidden">
+      <span id="peak-name"></span>
+      <span id="peak-elevation"></span>
     </div>
 
     <!-- Loading Overlay -->
     <div id="loading" class="hidden">
+      <div class="loading-content">
         <div class="spinner"></div>
         <p id="loading-text">Loading...</p>
+        <div class="loading-progress">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+      </div>
     </div>
+
+    <!-- Welcome Modal -->
+    <div id="welcome-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1>🏔️ Contour</h1>
+          <p>Explore Earth's Terrain in 3D</p>
+        </div>
+        <div class="modal-body">
+          <p>
+            Search any location or choose a famous place to start exploring!
+          </p>
+          <div class="quick-start">
+            <button class="quick-start-btn" data-place="everest">
+              🏔️ Mount Everest
+            </button>
+            <button class="quick-start-btn" data-place="grand-canyon">
+              🏜️ Grand Canyon
+            </button>
+            <button class="quick-start-btn" data-place="alps">
+              ⛷️ Swiss Alps
+            </button>
+            <button class="quick-start-btn" data-place="fuji">
+              🗻 Mount Fuji
+            </button>
+          </div>
+        </div>
+        <button id="welcome-close" class="modal-close">
+          Start Exploring →
+        </button>
+      </div>
+    </div>
+
+    <!-- Himalaya Explorer Modal -->
+    <div id="himalaya-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>🏔️ Himalaya Explorer</h2>
+        <p>Explore the world's highest peaks! Click any peak to fly there.</p>
+        <div class="himalaya-peaks-grid" id="himalaya-peaks-grid">
+          <!-- Peaks loaded dynamically -->
+        </div>
+        <button id="himalaya-close" class="modal-close">Close</button>
+      </div>
+    </div>
+
+    <!-- Recording Indicator -->
+    <div id="recording-indicator" class="hidden">
+      <span class="rec-dot"></span>
+      <span id="recording-time">REC 0:00</span>
+    </div>
+
+    <!-- Footer -->
+    <footer id="app-footer">Built with 💖 by <strong>Mithun</strong></footer>
 
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="/static/voice.js"></script>
-    <script src="/static/app.js"></script>
-</body>
-
+    <script src="/static/voice.js?v=2"></script>
+    <script src="/static/app.js?v=2"></script>
+  </body>
 </html>

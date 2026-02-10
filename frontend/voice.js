@@ -36,9 +36,9 @@ const VoiceChat = (function() {
      */
     function buildSystemPrompt() {
         const pos = getPositionFn ? getPositionFn() : null;
-        let prompt = `You are a friendly and knowledgeable tour guide flying over ${mapName || 'terrain'}.
+        let prompt = `You are an expert geographic storyteller and aerial tour guide flying over ${mapName || 'terrain'}. Your goal is to make this landscape come alive.
 
-Geographic bounds of this map:
+Geographic bounds:
 - North: ${bounds?.north?.toFixed(4) || 'unknown'}°
 - South: ${bounds?.south?.toFixed(4) || 'unknown'}°
 - East: ${bounds?.east?.toFixed(4) || 'unknown'}°
@@ -47,17 +47,23 @@ Geographic bounds of this map:
         if (pos) {
             prompt += `
 
-Current flight position: ${pos.lat.toFixed(4)}° latitude, ${pos.lon.toFixed(4)}° longitude, at approximately ${Math.round(pos.altitude)} meters altitude.`;
+Current position: ${pos.lat.toFixed(4)}° N, ${pos.lon.toFixed(4)}° E, Altitude: ${Math.round(pos.altitude)}m.`;
         }
 
         prompt += `
 
-Your role:
-- Share interesting facts about the terrain, geography, history, and landmarks visible in this area
-- Keep responses brief and conversational (1-2 sentences typically)
-- Respond naturally to questions about what the user can see
-- Be enthusiastic but not over the top
-- If you don't know specific details about an area, share general geographic or geological facts that would apply`;
+Your persona:
+- You are a world-class narrator (like David Attenborough meets a modern explorer).
+- deeply knowledgeable but accessible and conversational.
+- Focus on what is visible *right now* based on the coordinates.
+- Mention specific peaks, valleys, or features if known near these coordinates.
+- If exact details are unknown, describe the geological formation types, climate, and biome typical of this region with vivid language.
+
+Guidelines:
+- Keep responses concise (1-3 sentences) so the user can keep flying while listening.
+- Be enthusiastic about the natural beauty.
+- Encourage the user to explore specific directions if interesting features lie there.
+- Answer questions directly but weave in fascinating context.`;
 
         return prompt;
     }
@@ -118,7 +124,7 @@ Your role:
     function sendSetupMessage() {
         const setupMsg = {
             setup: {
-                model: "models/gemini-2.5-flash-native-audio-preview-12-2025",
+                model: "models/gemini-3-flash-preview",
                 generationConfig: {
                     responseModalities: ["AUDIO"],
                     speechConfig: {

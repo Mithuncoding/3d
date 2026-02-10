@@ -22,7 +22,13 @@ load_dotenv()
 # Setup paths
 BASE_DIR = Path(__file__).parent.parent
 UPLOADS_DIR = BASE_DIR / "uploads"
-UPLOADS_DIR.mkdir(exist_ok=True)
+try:
+    UPLOADS_DIR.mkdir(exist_ok=True)
+except OSError:
+    # Likely read-only filesystem (Vercel/Lambda)
+    import tempfile
+    UPLOADS_DIR = Path(tempfile.gettempdir()) / "uploads"
+    UPLOADS_DIR.mkdir(exist_ok=True)
 
 # Create FastAPI app
 app = FastAPI(title="Contour", description="World-Class 3D Terrain Explorer")

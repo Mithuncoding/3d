@@ -1045,41 +1045,7 @@ button:disabled {
   display: none !important;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  #search-bar {
-    width: calc(100% - 40px);
-    flex-direction: column;
-  }
-
-  .search-wrapper {
-    width: 100%;
-  }
-
-  #controls {
-    width: calc(100% - 40px);
-    left: 20px;
-    right: 20px;
-    top: auto;
-    bottom: 20px;
-    max-height: 50vh;
-  }
-
-  #location-panel {
-    width: calc(100% - 40px);
-    left: 20px;
-    right: 20px;
-    top: 140px;
-  }
-
-  #info {
-    display: none;
-  }
-
-  .quick-start {
-    grid-template-columns: 1fr;
-  }
-}
+/* First mobile block removed — all mobile styles consolidated in the main mobile block below */
 
 /* ============================================
    Tour Controls
@@ -1775,22 +1741,53 @@ body.cinematic-mode {
     padding-top: 70px;
   }
 
-  #controls.mobile-open {
+  #controls.active {
     left: 0;
+  }
+
+  #controls::-webkit-scrollbar {
+    width: 4px;
   }
 
   /* Overlay when menu is open */
   #menu-overlay {
-    display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0);
     z-index: 1040;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(0px);
+    pointer-events: none;
+    transition: background 0.35s ease, backdrop-filter 0.35s ease;
   }
 
   #menu-overlay.active {
-    display: block;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    pointer-events: auto;
+  }
+
+  /* Hide floating home button on mobile — overlaps hamburger */
+  #floating-home-btn {
+    display: none;
+  }
+
+  /* Hide keyboard shortcuts bar on mobile */
+  #info {
+    display: none;
+  }
+
+  /* Coordinates at bottom — avoid overlap */
+  #coords {
+    bottom: 10px;
+    right: 10px;
+    font-size: 10px;
+    gap: 8px;
+  }
+
+  /* Footer smaller on mobile */
+  #app-footer {
+    font-size: 10px;
+    padding: 6px 16px;
   }
 
   /* Search Bar */

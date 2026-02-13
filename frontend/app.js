@@ -241,6 +241,16 @@ function safeAddListener(id, event, handler) {
   }
 }
 
+// Helper to close mobile hamburger menu
+function closeMobileMenu() {
+  const controls = document.getElementById('controls');
+  const overlay = document.getElementById('menu-overlay');
+  const toggle = document.getElementById('menu-toggle');
+  if (controls) controls.classList.remove('active');
+  if (overlay) overlay.classList.remove('active');
+  if (toggle) toggle.textContent = '☰';
+}
+
 function setupUI() {
   setupWelcomeModal();
   setupSearch();
@@ -263,13 +273,21 @@ function setupUI() {
     menuToggle.addEventListener('click', () => {
       controls.classList.toggle('active');
       menuOverlay.classList.toggle('active');
+      // Toggle hamburger icon to X
+      menuToggle.textContent = controls.classList.contains('active') ? '✕' : '☰';
     });
 
     menuOverlay.addEventListener('click', () => {
-      controls.classList.remove('active');
-      menuOverlay.classList.remove('active');
+      closeMobileMenu();
     });
   }
+
+  // Auto-close mobile menu when an action button is tapped
+  document.querySelectorAll('.action-btn, .time-card, .quick-start-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      closeMobileMenu();
+    });
+  });
 
   // Quick Actions
   safeAddListener("fly-btn", "click", toggleFlyMode);

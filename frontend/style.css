@@ -1947,3 +1947,125 @@ body.cinematic-mode {
     font-size: 16px;
   }
 }
+
+/* ============================================
+   Virtual Joystick Controls (Mobile Fly Mode)
+   ============================================ */
+#fly-touch-controls {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #fly-touch-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 220px;
+    z-index: 1200;
+    pointer-events: none;
+  }
+
+  #fly-touch-controls:not(.hidden) {
+    display: block;
+  }
+
+  .joystick-container {
+    position: absolute;
+    bottom: 30px;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .joystick-left {
+    left: 30px;
+  }
+
+  .joystick-right {
+    right: 30px;
+  }
+
+  .joystick-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .joystick-base {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(78, 205, 196, 0.3);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 0 30px rgba(78, 205, 196, 0.1),
+      inset 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .joystick-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4ecdc4, #44a3aa);
+    box-shadow:
+      0 2px 12px rgba(78, 205, 196, 0.5),
+      0 0 20px rgba(78, 205, 196, 0.2);
+    position: absolute;
+    transition: box-shadow 0.2s;
+    touch-action: none;
+  }
+
+  .joystick-thumb.active {
+    box-shadow:
+      0 2px 20px rgba(78, 205, 196, 0.8),
+      0 0 40px rgba(78, 205, 196, 0.4);
+    transform: scale(1.1);
+  }
+
+  .fly-exit-btn {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: auto;
+    background: rgba(239, 68, 68, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    border-radius: 30px;
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 24px;
+    cursor: pointer;
+    width: auto;
+    margin: 0;
+    transition: all 0.2s;
+  }
+
+  .fly-exit-btn:active {
+    background: rgba(239, 68, 68, 0.4);
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  /* When fly mode is active, hide other UI for immersion */
+  body.fly-active #search-bar,
+  body.fly-active #app-footer,
+  body.fly-active #menu-toggle {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  body.fly-active #coords {
+    bottom: 240px;
+  }
+}

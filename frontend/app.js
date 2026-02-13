@@ -251,9 +251,137 @@ function closeMobileMenu() {
   if (toggle) toggle.textContent = '☰';
 }
 
+// Detect mobile
+function isMobile() {
+  return window.innerWidth <= 768 || 'ontouchstart' in window;
+}
+
+// ==========================================
+// VIRTUAL JOYSTICK (Mobile Fly Mode)
+// ==========================================
+function setupFlyTouchControls() {
+  const flyControls = document.getElementById('fly-touch-controls');
+  if (!flyControls) return;
+
+  // Exit button
+  const exitBtn = document.getElementById('fly-exit-mobile');
+  if (exitBtn) {
+    exitBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFlyMode();
+    });
+  }
+
+  // Setup each joystick
+  setupJoystick('joystick-left', (dx, dy) => {
+    // Left joystick: dx = turn (A/D), dy = pitch (W/S)
+    const deadzone = 0.15;
+    state.keys['KeyA'] = dx < -deadzone;
+    state.keys['KeyD'] = dx > deadzone;
+    state.keys['KeyW'] = dy < -deadzone;
+    state.keys['KeyS'] = dy > deadzone;
+  });
+
+  setupJoystick('joystick-right', (dx, dy) => {
+    // Right joystick: dy = altitude (Space/C), dx = speed (Shift/Ctrl)
+    const deadzone = 0.15;
+    state.keys['Space'] = dy < -deadzone;
+    state.keys['KeyC'] = dy > deadzone;
+    state.keys['ShiftLeft'] = dx > deadzone;
+    state.keys['ControlLeft'] = dx < -deadzone;
+  });
+}
+
+function setupJoystick(containerId, onMove) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const base = container.querySelector('.joystick-base');
+  const thumb = container.querySelector('.joystick-thumb');
+  if (!base || !thumb) return;
+
+  let active = false;
+  let touchId = null;
+  const maxDist = 38; // Max pixels the thumb can move from center
+
+  function getOffset(touch) {
+    const rect = base.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let dx = touch.clientX - cx;
+    let dy = touch.clientY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > maxDist) {
+      dx = (dx / dist) * maxDist;
+      dy = (dy / dist) * maxDist;
+    }
+    return { dx, dy, normX: dx / maxDist, normY: dy / maxDist };
+  }
+
+  base.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (active) return;
+    const touch = e.changedTouches[0];
+    touchId = touch.identifier;
+    active = true;
+    thumb.classList.add('active');
+    const { dx, dy, normX, normY } = getOffset(touch);
+    thumb.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
+    onMove(normX, normY);
+  }, { passive: false });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!active) return;
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === touchId) {
+        e.preventDefault();
+        const { dx, dy, normX, normY } = getOffset(touch);
+        thumb.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
+        onMove(normX, normY);
+        break;
+      }
+    }
+  }, { passive: false });
+
+  const endTouch = (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === touchId) {
+        active = false;
+        touchId = null;
+        thumb.classList.remove('active');
+        thumb.style.transform = 'translate(0px, 0px)';
+        onMove(0, 0); // Reset all keys for this joystick
+        break;
+      }
+    }
+  };
+
+  document.addEventListener('touchend', endTouch);
+  document.addEventListener('touchcancel', endTouch);
+}
+
+function showFlyTouchControls() {
+  if (!isMobile()) return;
+  const el = document.getElementById('fly-touch-controls');
+  if (el) el.classList.remove('hidden');
+  document.body.classList.add('fly-active');
+}
+
+function hideFlyTouchControls() {
+  const el = document.getElementById('fly-touch-controls');
+  if (el) el.classList.add('hidden');
+  document.body.classList.remove('fly-active');
+  // Reset all virtual keys
+  ['KeyA','KeyD','KeyW','KeyS','Space','KeyC','ShiftLeft','ControlLeft'].forEach(k => {
+    state.keys[k] = false;
+  });
+}
+
 function setupUI() {
   setupWelcomeModal();
   setupSearch();
+  setupFlyTouchControls();
 
   // Famous places dropdown
   safeAddListener("famous-places", "change", (e) => {
@@ -1277,12 +1405,14 @@ function toggleFlyMode() {
     }
     btn.classList.add("active");
     btn.querySelector("span:last-child").textContent = "Exit Fly";
+    showFlyTouchControls();
   } else {
     state.planeMode = false;
     if (state.plane) state.plane.visible = false;
     if (state.planeAudio) state.planeAudio.pause();
     btn.classList.remove("active");
     btn.querySelector("span:last-child").textContent = "Fly Mode";
+    hideFlyTouchControls();
     updateOrbitCamera();
   }
 }
